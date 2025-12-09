@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sambuwig POS System</title>
+    <!-- Tailwind CSS for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Loader */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-white border-l-4 border-blue-500 shadow-lg p-4 rounded flex items-center hidden">
+        <div id="toast-icon" class="mr-3 text-blue-500"><i class="fas fa-info-circle"></i></div>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm">Notification</h4>
+            <p id="toast-message" class="text-xs text-gray-600">Message goes here</p>
+        </div>
+    </div>
+
+    <!-- APP CONTAINER -->
+    <div id="app" class="flex-1 flex flex-col relative h-full">
+        
+        <!-- LOGIN VIEW -->
+        <div id="login-view" class="absolute inset-0 z-40 bg-gray-900 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+                <div class="text-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-utensils text-orange-500 mr-2"></i>Sambuwig POS</h1>
+                    <p class="text-gray-500 text-sm mt-2">Authorized Personnel Only</p>
+                </div>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" id="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="staff@restaurant.com" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="password" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="••••••••" required>
+                    </div>
+                    <div id="login-error" class="text-red-500 text-sm hidden"></div>
+                    <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded transition duration-200">
+                        Secure Login
+                    </button>
+                    <p class="text-xs text-gray-400 text-center mt-4">Connected to Authorized User Database</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT (Hidden until login) -->
+        <div id="main-layout" class="hidden h-full flex flex-col md:flex-row">
+            
+            <!-- SIDEBAR NAVIGATION -->
+            <nav class="bg-gray-800 text-white w-full md:w-64 flex-shrink-0 flex flex-col justify-between">
+                <div>
+                    <div class="p-6 flex items-center font-bold text-xl border-b border-gray-700">
+                        <i class="fas fa-utensils text-orange-500 mr-3"></i> Sambuwig
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center bg-gray-700 text-orange-400" data-target="dashboard">
+                            <i class="fas fa-chart-line w-6"></i> Dashboard
+                        </button>
+                        <button onclick="switchTab('history')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center" data-target="history">
+                            <i class="fas fa-history w-6"></i> History & Logs
+                        </button>
+                        <button onclick="switchTab('inventory')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center" data-target="inventory">
+                            <i class="fas fa-boxes w-6"></i> Inventory List
+                        </button>
+                        <button onclick="switchTab('adjust')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center" data-target="adjust">
+                            <i class="fas fa-edit w-6"></i> Adjust Stock
+                        </button>
+                        <button onclick="switchTab('pos')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center text-green-400 font-bold" data-target="pos">
+                            <i class="fas fa-mobile-alt w-6"></i> Mobile Order
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-700">
+                    <div class="text-xs text-gray-400 mb-2">Logged in as: <span id="user-email-display"></span></div>
+                    <button id="logout-btn" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm">Logout</button>
+                </div>
+            </nav>
+
+            <!-- CONTENT AREA -->
+            <main class="flex-1 overflow-y-auto relative bg-gray-50 h-full">
+                
+                <!-- DASHBOARD TAB -->
+                <div id="tab-dashboard" class="content-tab p-6 space-y-6 fade-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Overview</h2>
+                    
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-gray-500 text-sm uppercase">Sales (This Month)</p>
+                                    <h3 class="text-3xl font-bold text-gray-800" id="total-sales">$0.00</h3>
+                                </div>
+                                <div class="text-green-500 bg-green-100 p-3 rounded-full"><i class="fas fa-dollar-sign"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500 cursor-pointer" onclick="switchTab('adjust')">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-gray-500 text-sm uppercase">Low Stock Items</p>
+                                    <h3 class="text-3xl font-bold text-red-600" id="low-stock-count">0</h3>
+                                    <p class="text-xs text-red-400 mt-1">Items below threshold</p>
+                                </div>
+                                <div class="text-red-500 bg-red-100 p-3 rounded-full"><i class="fas fa-exclamation-triangle"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-gray-500 text-sm uppercase">Dead Stock</p>
+                                    <h3 class="text-3xl font-bold text-yellow-600" id="dead-stock-count">0</h3>
+                                    <p class="text-xs text-yellow-500 mt-1">Not sold in 30 days</p>
+                                </div>
+                                <div class="text-yellow-500 bg-yellow-100 p-3 rounded-full"><i class="fas fa-hourglass-end"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="px-6 py-4 border-b border-gray-200 bg-red-50 rounded-t-lg">
+                                <h3 class="font-bold text-red-700">Low Stock Alerts</h3>
+                            </div>
+                            <ul id="low-stock-list" class="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                                <!-- Dynamic List -->
+                            </ul>
+                        </div>
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="px-6 py-4 border-b border-gray-200 bg-yellow-50 rounded-t-lg">
+                                <h3 class="font-bold text-yellow-700">Dead Stock (Unsold > 30 Days)</h3>
+                            </div>
+                            <ul id="dead-stock-list" class="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                                <!-- Dynamic List -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Admin Actions -->
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-700 mb-2">Admin Actions</h3>
+                        <p class="text-sm text-gray-500 mb-3">Dangerous actions are protected by administrator password.</p>
+                        <button onclick="resetSalesData()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center">
+                            <i class="fas fa-trash-alt mr-2"></i> Reset Sales History
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HISTORY TAB (NEW) -->
+                <div id="tab-history" class="content-tab hidden p-6 fade-in h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Transaction & Audit History</h2>
+                            <p class="text-sm text-gray-500">Record of sales and inventory adjustments.</p>
+                        </div>
+                        <div class="bg-white rounded border flex items-center px-3 py-2">
+                            <i class="fas fa-search text-gray-400 mr-2"></i>
+                            <input type="text" id="history-search" placeholder="Search history..." class="outline-none text-sm w-64">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-y-auto">
+                        <table class="min-w-full leading-normal">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date/Time</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Details</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount/Val</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- INVENTORY LIST TAB -->
+                <div id="tab-inventory" class="content-tab hidden p-6 fade-in h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Current Inventory</h2>
+                        <div class="bg-white rounded border flex items-center px-3 py-2">
+                            <i class="fas fa-search text-gray-400 mr-2"></i>
+                            <input type="text" id="inventory-search" placeholder="Search items..." class="outline-none text-sm w-64">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-y-auto">
+                        <table class="min-w-full leading-normal">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADJUST STOCK TAB -->
+                <div id="tab-adjust" class="content-tab hidden p-6 fade-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Inventory Management</h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Add New Item Form -->
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-bold text-gray-700 mb-4 pb-2 border-b">Add New Menu Item</h3>
+                            <form id="add-item-form" class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Item Name</label>
+                                        <input type="text" id="new-item-name" class="w-full border rounded p-2 text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Category</label>
+                                        <select id="new-item-category" class="w-full border rounded p-2 text-sm">
+                                            <option value="Main">Main Course</option>
+                                            <option value="Appetizer">Appetizer</option>
+                                            <option value="Beverage">Beverage</option>
+                                            <option value="Dessert">Dessert</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Price</label>
+                                        <input type="number" step="0.01" id="new-item-price" class="w-full border rounded p-2 text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Initial Stock</label>
+                                        <input type="number" id="new-item-stock" class="w-full border rounded p-2 text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Low Threshold</label>
+                                        <input type="number" id="new-item-threshold" value="10" class="w-full border rounded p-2 text-sm">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded">Add Item</button>
+                            </form>
+                        </div>
+
+                        <!-- Quick Adjust Form -->
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-bold text-gray-700 mb-4 pb-2 border-b">Quick Adjust / Restock</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 uppercase">Select Item</label>
+                                    <select id="adjust-item-select" class="w-full border rounded p-2 text-sm bg-gray-50">
+                                        <option>Loading items...</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-100 p-3 rounded text-center">
+                                        <span class="text-xs text-gray-500">Current Stock</span>
+                                        <div class="text-2xl font-bold" id="adjust-current-stock">--</div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase">Amount to Add/Remove</label>
+                                        <input type="number" id="adjust-amount" class="w-full border rounded p-2 text-sm" placeholder="e.g., 5 or -2">
+                                        <p class="text-xs text-gray-400 mt-1">Use negative to deduct manually</p>
+                                    </div>
+                                </div>
+
+                                <button id="btn-update-stock" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Update Stock</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOBILE POS TAB -->
+                <div id="tab-pos" class="content-tab hidden h-full flex flex-col md:flex-row fade-in overflow-hidden">
+                    <!-- Menu Grid -->
+                    <div class="flex-1 overflow-y-auto p-4 bg-gray-200">
+                        <div class="mb-4 overflow-x-auto whitespace-nowrap pb-2" id="pos-categories">
+                            <button onclick="filterPos('All')" class="px-4 py-2 bg-gray-800 text-white rounded-full text-sm mr-2 shadow">All</button>
+                            <button onclick="filterPos('Main')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100">Main</button>
+                            <button onclick="filterPos('Appetizer')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100">Appetizers</button>
+                            <button onclick="filterPos('Beverage')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100">Beverages</button>
+                            <button onclick="filterPos('Dessert')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100">Desserts</button>
+                        </div>
+                        
+                        <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-20 md:pb-4">
+                            <!-- Items Injected Here -->
+                        </div>
+                    </div>
+
+                    <!-- Cart Sidebar -->
+                    <div class="w-full md:w-96 bg-white shadow-xl flex flex-col h-1/2 md:h-full border-t md:border-l border-gray-300">
+                        <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="font-bold text-lg">Current Order</h3>
+                            <button onclick="clearCart()" class="text-xs text-red-500 hover:text-red-700">Clear All</button>
+                        </div>
+                        
+                        <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3">
+                            <div class="text-center text-gray-400 mt-10 italic">Cart is empty</div>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 border-t border-gray-200">
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span>Subtotal</span>
+                                <span id="cart-total">$0.00</span>
+                            </div>
+                            <div class="flex justify-between mb-4 text-xl font-bold">
+                                <span>Total</span>
+                                <span id="cart-final-total">$0.00</span>
+                            </div>
+                            <button id="btn-process-order" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg shadow-lg transform transition active:scale-95 flex justify-center items-center">
+                                <span>Process Order</span>
+                                <i class="fas fa-check ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, runTransaction, query, where, orderBy, getDocs, setDoc, deleteDoc, writeBatch, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5L9S3_diMaKQ7IyXEnyhEuWOHz8-QTvY",
+            authDomain: "my-pos-system-3683a.firebaseapp.com",
+            projectId: "my-pos-system-3683a",
+            storageBucket: "my-pos-system-3683a.firebasestorage.app",
+            messagingSenderId: "1040426979758",
+            appId: "1:1040426979758:web:da01b11782d68dac86f83f",
+            measurementId: "G-19J5SSFD9H"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // State
+        let currentUser = null;
+        let inventoryData = [];
+        let salesData = [];
+        let auditData = [];
+        let cart = {}; // { itemId: { quantity: 1, discount: 0, item: {...} } }
+
+        const ADMIN_EMAIL = "admin@smbwg.com";
+
+        // --- AUTH & INITIALIZATION ---
+
+        onAuthStateChanged(auth, async (user) => {
+            const loginView = document.getElementById('login-view');
+            const mainLayout = document.getElementById('main-layout');
+            
+            if (user) {
+                currentUser = user;
+                document.getElementById('user-email-display').textContent = user.email;
+                
+                // Init Listeners
+                subscribeToInventory();
+                subscribeToSales();
+                subscribeToAuditLogs();
+
+                loginView.classList.add('hidden');
+                mainLayout.classList.remove('hidden');
+                showToast('Welcome back!', 'success');
+            } else {
+                loginView.classList.remove('hidden');
+                mainLayout.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    errorDiv.textContent = error.message;
+                    errorDiv.classList.remove('hidden');
+                });
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // --- DATA SYNC ---
+
+        function subscribeToInventory() {
+            const q = query(collection(db, "inventory"), orderBy("name"));
+            onSnapshot(q, (snapshot) => {
+                inventoryData = [];
+                snapshot.forEach((doc) => {
+                    inventoryData.push({ id: doc.id, ...doc.data() });
+                });
+
+                updateDashboardStats();
+                renderInventoryTable();
+                populateAdjustSelect();
+                renderPosGrid();
+            });
+        }
+
+        function subscribeToSales() {
+            // Get sales for this month only for dashboard, but history tab needs sorting
+            // We listen to recent sales (limit 100) for history display
+            const q = query(collection(db, "sales"), orderBy("timestamp", "desc"), limit(100));
+            
+            onSnapshot(q, (snapshot) => {
+                salesData = [];
+                snapshot.forEach((doc) => {
+                    salesData.push({ id: doc.id, ...doc.data(), type: 'sale' });
+                });
+                updateDashboardStats();
+                renderHistoryTable();
+            });
+        }
+
+        function subscribeToAuditLogs() {
+            const q = query(collection(db, "audit_logs"), orderBy("timestamp", "desc"), limit(100));
+            onSnapshot(q, (snapshot) => {
+                auditData = [];
+                snapshot.forEach((doc) => {
+                    auditData.push({ id: doc.id, ...doc.data(), type: 'audit' });
+                });
+                renderHistoryTable();
+            });
+        }
+
+        // --- DASHBOARD LOGIC ---
+
+        function updateDashboardStats() {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0,0,0,0);
+
+            // Filter salesData for dashboard stats (client side filter of the 100 fetched)
+            
+            const total = salesData.reduce((sum, sale) => {
+                 if(new Date(sale.timestamp) >= startOfMonth) return sum + (sale.total || 0);
+                 return sum;
+            }, 0);
+            
+            document.getElementById('total-sales').textContent = '$' + total.toFixed(2);
+
+            // 2. Low Stock & Dead Stock
+            const lowStockList = document.getElementById('low-stock-list');
+            const deadStockList = document.getElementById('dead-stock-list');
+            lowStockList.innerHTML = '';
+            deadStockList.innerHTML = '';
+
+            let lowCount = 0;
+            let deadCount = 0;
+
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+
+            inventoryData.forEach(item => {
+                // Low Stock Check
+                const threshold = item.lowStockThreshold || 10;
+                if (item.stock < threshold) {
+                    lowCount++;
+                    const li = document.createElement('li');
+                    li.className = 'px-6 py-4 flex items-center justify-between hover:bg-gray-50';
+                    li.innerHTML = `
+                        <div>
+                            <p class="font-bold text-gray-800">${item.name}</p>
+                            <p class="text-xs text-gray-500">Category: ${item.category}</p>
+                        </div>
+                        <span class="px-3 py-1 text-xs font-bold text-red-800 bg-red-100 rounded-full">${item.stock} left</span>
+                    `;
+                    lowStockList.appendChild(li);
+                }
+
+                // Dead Stock Check
+                if (item.lastSold) {
+                    const lastSoldDate = new Date(item.lastSold).getTime();
+                    if (lastSoldDate < thirtyDaysAgo) {
+                        deadCount++;
+                        const li = document.createElement('li');
+                        li.className = 'px-6 py-4 flex items-center justify-between hover:bg-gray-50';
+                        li.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-800">${item.name}</p>
+                                <p class="text-xs text-gray-500">Last Sold: ${new Date(item.lastSold).toLocaleDateString()}</p>
+                            </div>
+                            <span class="text-yellow-500"><i class="fas fa-clock"></i></span>
+                        `;
+                        deadStockList.appendChild(li);
+                    }
+                }
+            });
+
+            document.getElementById('low-stock-count').textContent = lowCount;
+            document.getElementById('dead-stock-count').textContent = deadCount;
+        }
+
+        // --- HISTORY TAB LOGIC ---
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            const filter = document.getElementById('history-search').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            // Merge and Sort
+            const combined = [...salesData, ...auditData].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
+            combined.forEach(record => {
+                // Search filter
+                const str = JSON.stringify(record).toLowerCase();
+                if(!str.includes(filter)) return;
+
+                const date = new Date(record.timestamp).toLocaleString();
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 border-b border-gray-100";
+
+                let typeBadge = '';
+                let detailsHTML = '';
+                let amountHTML = '';
+                let actionHTML = '';
+
+                if(record.type === 'sale') {
+                    typeBadge = `<span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">Sale</span>`;
+                    const itemsSummary = record.items.map(i => `${i.qty}x ${i.name} ${i.discount ? '(-'+i.discount+'%)' : ''}`).join(', ');
+                    detailsHTML = `<p class="text-sm text-gray-800 truncate w-64" title="${itemsSummary}">${itemsSummary}</p>`;
+                    
+                    // Admin Edit: Clickable Total
+                    if(isAdmin) {
+                        amountHTML = `<button onclick="editTransactionTotal('${record.id}', ${record.total})" class="font-bold text-green-600 hover:text-green-800 hover:underline" title="Admin: Edit Total">$${record.total.toFixed(2)}</button>`;
+                    } else {
+                        amountHTML = `<span class="font-bold text-green-600">$${record.total.toFixed(2)}</span>`;
+                    }
+                } else {
+                    const color = record.action === 'delete' ? 'red' : (record.action === 'add' ? 'blue' : 'yellow');
+                    typeBadge = `<span class="bg-${color}-100 text-${color}-800 text-xs font-semibold px-2 py-1 rounded uppercase">${record.action || 'Log'}</span>`;
+                    detailsHTML = `<p class="text-sm text-gray-600">${record.description}</p>`;
+                    amountHTML = `<span class="text-gray-400 text-xs">-</span>`;
+                }
+
+                // Admin Action: Delete
+                if(isAdmin) {
+                    actionHTML = `
+                        <button onclick="deleteHistoryRecord('${record.id}', '${record.type}')" class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-2 py-1 rounded">
+                            <i class="fas fa-times"></i> Del
+                        </button>
+                    `;
+                } else {
+                    actionHTML = `<span class="text-gray-300 text-xs">Locked</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-5 py-4 text-xs text-gray-500">${date}</td>
+                    <td class="px-5 py-4">${typeBadge}</td>
+                    <td class="px-5 py-4">${detailsHTML}</td>
+                    <td class="px-5 py-4 text-xs text-gray-500">${record.staffEmail || 'System'}</td>
+                    <td class="px-5 py-4 text-right">${amountHTML}</td>
+                    <td class="px-5 py-4 text-right">${actionHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('history-search').addEventListener('input', renderHistoryTable);
+
+        // --- ADMIN FUNCTIONS ---
+
+        window.deleteHistoryRecord = async (id, type) => {
+            if(!confirm("Admin Action: Are you sure you want to delete this record? This does not revert inventory changes.")) return;
+            
+            try {
+                const collectionName = type === 'sale' ? 'sales' : 'audit_logs';
+                await deleteDoc(doc(db, collectionName, id));
+                showToast("Record deleted successfully.", "success");
+            } catch(e) {
+                showToast("Delete failed: " + e.message, "error");
+            }
+        };
+
+        window.editTransactionTotal = async (id, currentTotal) => {
+            const newTotal = prompt("Admin Edit: Enter new total amount:", currentTotal);
+            if(newTotal === null) return;
+            const val = parseFloat(newTotal);
+            if(isNaN(val)) return showToast("Invalid number", "error");
+
+            try {
+                await updateDoc(doc(db, "sales", id), { total: val });
+                showToast("Transaction total updated.", "success");
+            } catch(e) {
+                showToast("Update failed: " + e.message, "error");
+            }
+        };
+
+
+        // --- INVENTORY MANAGEMENT LOGIC ---
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventory-table-body');
+            const filter = document.getElementById('inventory-search').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            inventoryData.forEach(item => {
+                if(item.name.toLowerCase().includes(filter)) {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            <p class="text-gray-900 whitespace-no-wrap font-bold">${item.name}</p>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            <span class="relative inline-block px-3 py-1 font-semibold text-gray-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-gray-200 opacity-50 rounded-full"></span>
+                                <span class="relative">${item.category}</span>
+                            </span>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            <p class="text-gray-900 whitespace-no-wrap">$${item.price.toFixed(2)}</p>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                            <p class="text-gray-900 whitespace-no-wrap font-mono font-bold ${item.stock < (item.lowStockThreshold || 10) ? 'text-red-600' : 'text-green-600'}">${item.stock}</p>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                             <span class="relative inline-block px-3 py-1 font-semibold ${item.stock > 0 ? 'text-green-900' : 'text-red-900'} leading-tight">
+                                <span aria-hidden class="absolute inset-0 ${item.stock > 0 ? 'bg-green-200' : 'bg-red-200'} opacity-50 rounded-full"></span>
+                                <span class="relative">${item.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                            </span>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            <button onclick="deleteInventoryItem('${item.id}', '${item.name}')" class="text-red-500 hover:text-red-700 font-bold text-xs uppercase tracking-wider border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition">
+                                <i class="fas fa-trash mr-1"></i> Remove
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+        }
+
+        document.getElementById('inventory-search').addEventListener('input', renderInventoryTable);
+
+        // Delete Item Logic
+        window.deleteInventoryItem = async (id, name) => {
+            if(!confirm("Are you sure you want to permanently delete this menu item?")) return;
+            
+            try {
+                await deleteDoc(doc(db, "inventory", id));
+                
+                // Log it
+                await addDoc(collection(db, "audit_logs"), {
+                    action: 'delete',
+                    description: `Deleted item: ${name}`,
+                    timestamp: new Date().toISOString(),
+                    staffEmail: currentUser.email
+                });
+
+                showToast("Item deleted successfully", "success");
+            } catch(e) {
+                showToast("Error deleting item: " + e.message, "error");
+            }
+        };
+
+        // Reset Sales Data Logic (ADMIN ONLY)
+        window.resetSalesData = async () => {
+            const pwd = prompt("Enter Admin Password to delete all sales records:");
+            if (pwd !== "090408") {
+                return showToast("Incorrect Password!", "error");
+            }
+            
+            if (!confirm("WARNING: This will permanently delete ALL sales history. This cannot be undone. Continue?")) return;
+
+            try {
+                const q = query(collection(db, "sales"));
+                const snapshot = await getDocs(q);
+                
+                // Batch delete (max 500)
+                const batch = writeBatch(db);
+                snapshot.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                // Log the reset
+                await addDoc(collection(db, "audit_logs"), {
+                    action: 'reset',
+                    description: `Admin Reset all Sales History`,
+                    timestamp: new Date().toISOString(),
+                    staffEmail: currentUser.email
+                });
+
+                showToast("Sales history has been reset.", "success");
+            } catch (e) {
+                showToast("Error resetting sales: " + e.message, "error");
+            }
+        };
+
+        // Add Item
+        document.getElementById('add-item-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            
+            try {
+                const name = document.getElementById('new-item-name').value;
+                const stock = parseInt(document.getElementById('new-item-stock').value);
+
+                await addDoc(collection(db, "inventory"), {
+                    name: name,
+                    category: document.getElementById('new-item-category').value,
+                    price: parseFloat(document.getElementById('new-item-price').value),
+                    stock: stock,
+                    lowStockThreshold: parseInt(document.getElementById('new-item-threshold').value),
+                    lastSold: new Date().toISOString() // Init date
+                });
+
+                // Log it
+                await addDoc(collection(db, "audit_logs"), {
+                    action: 'add',
+                    description: `Added new item: ${name} (Stock: ${stock})`,
+                    timestamp: new Date().toISOString(),
+                    staffEmail: currentUser.email
+                });
+
+                showToast("Item added successfully!", "success");
+                e.target.reset();
+            } catch (err) {
+                showToast("Error adding item: " + err.message, "error");
+            }
+            btn.disabled = false;
+        });
+
+        // Quick Adjust
+        function populateAdjustSelect() {
+            const select = document.getElementById('adjust-item-select');
+            select.innerHTML = '<option value="">Select Item to Adjust...</option>';
+            inventoryData.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = `${item.name} (Cur: ${item.stock})`;
+                opt.dataset.name = item.name;
+                opt.dataset.stock = item.stock;
+                select.appendChild(opt);
+            });
+        }
+
+        document.getElementById('adjust-item-select').addEventListener('change', (e) => {
+            const stock = e.target.options[e.target.selectedIndex].dataset.stock;
+            document.getElementById('adjust-current-stock').textContent = stock || '--';
+        });
+
+        document.getElementById('btn-update-stock').addEventListener('click', async () => {
+            const select = document.getElementById('adjust-item-select');
+            const id = select.value;
+            const itemName = select.options[select.selectedIndex].dataset.name;
+            const amount = parseInt(document.getElementById('adjust-amount').value);
+            
+            if (!id || isNaN(amount)) return showToast("Please select item and amount", "error");
+
+            try {
+                // Use increment for atomic update
+                const itemRef = doc(db, "inventory", id);
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(itemRef);
+                    if (!sfDoc.exists()) throw "Item does not exist!";
+                    const newStock = sfDoc.data().stock + amount;
+                    transaction.update(itemRef, { stock: newStock });
+                });
+
+                // Log it
+                await addDoc(collection(db, "audit_logs"), {
+                    action: 'adjust',
+                    description: `Adjusted stock for ${itemName}: ${amount > 0 ? '+' : ''}${amount}`,
+                    timestamp: new Date().toISOString(),
+                    staffEmail: currentUser.email
+                });
+
+                showToast("Stock updated!", "success");
+                document.getElementById('adjust-amount').value = '';
+                document.getElementById('adjust-item-select').value = '';
+                document.getElementById('adjust-current-stock').textContent = '--';
+            } catch(e) {
+                showToast("Update failed: " + e.message, "error");
+            }
+        });
+
+
+        // --- MOBILE POS LOGIC ---
+
+        let posCategoryFilter = 'All';
+
+        window.filterPos = (category) => {
+            posCategoryFilter = category;
+            
+            // Update UI buttons
+            const btns = document.getElementById('pos-categories').querySelectorAll('button');
+            btns.forEach(b => {
+                if((category === 'All' && b.innerText === 'All') || b.innerText.includes(category)) {
+                    b.className = "px-4 py-2 bg-gray-800 text-white rounded-full text-sm mr-2 shadow transition";
+                } else {
+                    b.className = "px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100 transition";
+                }
+            });
+
+            renderPosGrid();
+        };
+
+        function renderPosGrid() {
+            const grid = document.getElementById('pos-grid');
+            grid.innerHTML = '';
+
+            inventoryData.forEach(item => {
+                if (posCategoryFilter === 'All' || item.category === posCategoryFilter) {
+                    const card = document.createElement('div');
+                    card.className = `bg-white p-4 rounded-lg shadow cursor-pointer transition transform hover:scale-105 active:scale-95 border-l-4 ${item.stock <= 0 ? 'border-red-500 opacity-60' : 'border-green-500'}`;
+                    
+                    if (item.stock > 0) {
+                        card.onclick = () => addToCart(item);
+                    }
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-gray-800 leading-tight h-10 overflow-hidden">${item.name}</h4>
+                            <span class="text-xs font-bold bg-gray-100 px-2 py-1 rounded">$${item.price}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Stock: ${item.stock}</p>
+                    `;
+                    grid.appendChild(card);
+                }
+            });
+        }
+
+        function addToCart(item) {
+            if (cart[item.id]) {
+                if (cart[item.id].quantity < item.stock) {
+                    cart[item.id].quantity++;
+                } else {
+                    showToast("No more stock available!", "error");
+                    return;
+                }
+            } else {
+                cart[item.id] = { quantity: 1, item: item, discount: 0 };
+            }
+            renderCart();
+        }
+
+        window.removeFromCart = (id) => {
+            delete cart[id];
+            renderCart();
+        };
+
+        window.clearCart = () => {
+            cart = {};
+            renderCart();
+        }
+
+        // Apply Discount Logic
+        window.applyDiscount = (itemId) => {
+            const password = prompt("Enter Discount Password (01 for Manager, 05 for PWD/Senior):");
+            if (!password) return;
+
+            if (password === "05") {
+                // PWD/Senior - Fixed 20%
+                if (cart[itemId]) {
+                    cart[itemId].discount = 20;
+                    showToast("PWD/Senior Discount Applied (20%)", "success");
+                    renderCart();
+                }
+            } else if (password === "01") {
+                // Manager - Manual Entry
+                const rateStr = prompt("Enter Discount Percentage (0-100):");
+                const rate = parseFloat(rateStr);
+                if (!isNaN(rate) && rate >= 0 && rate <= 100) {
+                    cart[itemId].discount = rate;
+                    showToast(`Manager Discount Applied (${rate}%)`, "success");
+                    renderCart();
+                } else {
+                    showToast("Invalid percentage", "error");
+                }
+            } else {
+                showToast("Invalid Password", "error");
+            }
+        };
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            container.innerHTML = '';
+            let total = 0;
+
+            const items = Object.values(cart);
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 mt-10 italic">Cart is empty</div>';
+            } else {
+                items.forEach(cartItem => {
+                    const originalPrice = cartItem.item.price;
+                    const discount = cartItem.discount || 0;
+                    const discountedPrice = originalPrice * ((100 - discount) / 100);
+                    const itemTotal = cartItem.quantity * discountedPrice;
+                    total += itemTotal;
+                    
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center bg-white border rounded p-2 shadow-sm";
+                    
+                    let priceDisplay = `$${originalPrice}`;
+                    if(discount > 0) {
+                        priceDisplay = `<span class="line-through text-gray-400 text-xs">$${originalPrice}</span> <span class="text-green-600 font-bold">$${discountedPrice.toFixed(2)}</span> <span class="text-xs bg-red-100 text-red-600 px-1 rounded">-${discount}%</span>`;
+                    }
+
+                    div.innerHTML = `
+                        <div class="flex-1">
+                            <div class="font-bold text-sm">${cartItem.item.name}</div>
+                            <div class="text-xs text-gray-500">${priceDisplay} x ${cartItem.quantity}</div>
+                        </div>
+                        <div class="font-bold text-gray-700 mr-2">$${itemTotal.toFixed(2)}</div>
+                        <div class="flex space-x-1">
+                            <button onclick="applyDiscount('${cartItem.item.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Apply Discount">
+                                <i class="fas fa-tag"></i>
+                            </button>
+                            <button onclick="removeFromCart('${cartItem.item.id}')" class="text-red-500 hover:text-red-700 p-1">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            document.getElementById('cart-total').textContent = '$' + total.toFixed(2);
+            document.getElementById('cart-final-total').textContent = '$' + total.toFixed(2);
+        }
+
+        // Process Order Transaction
+        document.getElementById('btn-process-order').addEventListener('click', async () => {
+            const items = Object.values(cart);
+            if (items.length === 0) return showToast("Cart is empty", "error");
+
+            const btn = document.getElementById('btn-process-order');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<div class="loader border-white"></div>';
+            btn.disabled = true;
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // 1. Check stock availability for all items in cart again (Concurrency safe)
+                    for (const cartItem of items) {
+                        const itemRef = doc(db, "inventory", cartItem.item.id);
+                        const sfDoc = await transaction.get(itemRef);
+                        
+                        if (!sfDoc.exists()) throw `Item ${cartItem.item.name} no longer exists!`;
+                        
+                        const newStock = sfDoc.data().stock - cartItem.quantity;
+                        if (newStock < 0) {
+                            throw `Not enough stock for ${cartItem.item.name}. Available: ${sfDoc.data().stock}`;
+                        }
+                        
+                        // 2. Deduct Stock
+                        transaction.update(itemRef, { 
+                            stock: newStock,
+                            lastSold: new Date().toISOString()
+                        });
+                    }
+
+                    // 3. Record Sale (Calc total with discounts)
+                    const total = items.reduce((sum, i) => {
+                        const discount = i.discount || 0;
+                        return sum + (i.quantity * i.item.price * ((100 - discount) / 100));
+                    }, 0);
+
+                    const saleRef = doc(collection(db, "sales"));
+                    transaction.set(saleRef, {
+                        items: items.map(i => ({ 
+                            name: i.item.name, 
+                            qty: i.quantity, 
+                            price: i.item.price, 
+                            id: i.item.id,
+                            discount: i.discount || 0
+                        })),
+                        total: total,
+                        timestamp: new Date().toISOString(),
+                        staffEmail: currentUser.email
+                    });
+                });
+
+                cart = {};
+                renderCart();
+                showToast("Order Processed Successfully!", "success");
+            } catch (e) {
+                showToast(e.toString().replace("Error:", ""), "error");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        });
+
+
+        // --- HELPER FUNCTIONS ---
+
+        window.switchTab = (tabId) => {
+            // Hide all tabs
+            document.querySelectorAll('.content-tab').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-gray-700', 'text-orange-400'));
+            
+            // Show target
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            // Highlight nav
+            const navBtn = document.querySelector(`button[data-target="${tabId}"]`);
+            if(navBtn) navBtn.classList.add('bg-gray-700', 'text-orange-400');
+        };
+
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            const title = document.getElementById('toast-title');
+            const message = document.getElementById('toast-message');
+            const icon = document.getElementById('toast-icon');
+
+            toast.classList.remove('hidden', 'translate-x-full', 'border-blue-500', 'border-red-500', 'border-green-500');
+            
+            if(type === 'error') {
+                toast.classList.add('border-red-500');
+                icon.className = 'mr-3 text-red-500 fas fa-exclamation-circle';
+                title.innerText = "Error";
+            } else if (type === 'success') {
+                toast.classList.add('border-green-500');
+                icon.className = 'mr-3 text-green-500 fas fa-check-circle';
+                title.innerText = "Success";
+            } else {
+                toast.classList.add('border-blue-500');
+                icon.className = 'mr-3 text-blue-500 fas fa-info-circle';
+                title.innerText = "Info";
+            }
+
+            message.innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+    </script>
+</body>
+</html>
