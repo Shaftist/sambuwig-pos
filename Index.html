@@ -104,7 +104,10 @@
                         </button>
 
                         <div class="pt-4 pb-2 px-3 text-xs font-bold text-gray-500 uppercase">Management</div>
-
+                        
+                        <button onclick="switchTab('reports')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center" data-target="reports">
+                            <i class="fas fa-file-invoice-dollar w-6 text-center"></i> <span class="ml-2">Monthly Reports</span>
+                        </button>
                         <button onclick="switchTab('history')" class="nav-btn w-full text-left p-3 rounded hover:bg-gray-700 transition flex items-center" data-target="history">
                             <i class="fas fa-history w-6 text-center"></i> <span class="ml-2">History & Logs</span>
                         </button>
@@ -157,13 +160,80 @@
                     </div>
                 </div>
 
+                <!-- REPORTS TAB (NEW) -->
+                <div id="tab-reports" class="content-tab hidden p-4 md:p-6 fade-in h-full flex flex-col">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Monthly Reports</h2>
+                    <div class="bg-white p-4 rounded shadow mb-6 flex flex-wrap gap-4 items-end">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Month</label>
+                            <select id="report-month" class="border rounded p-2 text-sm w-32 bg-white">
+                                <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+                                <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+                                <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+                                <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Year</label>
+                            <select id="report-year" class="border rounded p-2 text-sm w-24 bg-white">
+                                <!-- JS will populate -->
+                            </select>
+                        </div>
+                        <button onclick="generateReports()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded hover:bg-blue-700 shadow flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i> Generate Report
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 overflow-hidden">
+                        <!-- Sales Report Panel -->
+                        <div class="bg-white rounded shadow flex flex-col h-full border border-gray-200">
+                            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                                <h3 class="font-bold text-gray-700 flex items-center"><i class="fas fa-coins text-green-500 mr-2"></i> Sales History</h3>
+                                <button onclick="downloadSalesCSV()" class="text-green-600 text-sm font-bold hover:text-green-800 flex items-center bg-white border border-green-200 px-3 py-1 rounded shadow-sm">
+                                    <i class="fas fa-file-csv mr-1"></i> Download CSV
+                                </button>
+                            </div>
+                            <div class="flex-1 overflow-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-xs uppercase text-gray-500 sticky top-0">
+                                        <tr><th class="p-3">Date</th><th class="p-3">Order/Items</th><th class="p-3 text-right">Total</th></tr>
+                                    </thead>
+                                    <tbody id="report-sales-body" class="divide-y divide-gray-100">
+                                        <tr><td colspan="3" class="p-4 text-center text-gray-400 italic">Select date and click Generate</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-3 bg-gray-50 text-right font-bold border-t text-lg" id="report-sales-total">Total: $0.00</div>
+                        </div>
+
+                        <!-- Inventory Audit Report Panel -->
+                        <div class="bg-white rounded shadow flex flex-col h-full border border-gray-200">
+                            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                                <h3 class="font-bold text-gray-700 flex items-center"><i class="fas fa-warehouse text-orange-500 mr-2"></i> Inventory Log</h3>
+                                <button onclick="downloadAuditCSV()" class="text-green-600 text-sm font-bold hover:text-green-800 flex items-center bg-white border border-green-200 px-3 py-1 rounded shadow-sm">
+                                    <i class="fas fa-file-csv mr-1"></i> Download CSV
+                                </button>
+                            </div>
+                            <div class="flex-1 overflow-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-xs uppercase text-gray-500 sticky top-0">
+                                        <tr><th class="p-3">Date</th><th class="p-3">Action</th><th class="p-3">Description</th></tr>
+                                    </thead>
+                                    <tbody id="report-audit-body" class="divide-y divide-gray-100">
+                                        <tr><td colspan="3" class="p-4 text-center text-gray-400 italic">Select date and click Generate</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- KITCHEN VIEW TAB -->
                 <div id="tab-kitchen" class="content-tab hidden p-4 md:p-6 fade-in h-full flex flex-col">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
                         <i class="fas fa-fire text-orange-500 mr-2"></i> Kitchen Display System
                     </h2>
                     <div id="kitchen-orders-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-20">
-                        <!-- Dynamic Orders -->
                         <div class="text-gray-500 italic col-span-full text-center mt-10">No pending orders.</div>
                     </div>
                 </div>
@@ -174,7 +244,6 @@
                         <i class="fas fa-cash-register text-blue-500 mr-2"></i> Cashier & Active Tables
                     </h2>
                     <div id="cashier-orders-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-20">
-                         <!-- Dynamic Orders -->
                          <div class="text-gray-500 italic col-span-full text-center mt-10">No active tables.</div>
                     </div>
                 </div>
@@ -182,7 +251,6 @@
                 <!-- POS TAB -->
                 <div id="tab-pos" class="content-tab hidden h-full flex flex-col md:flex-row fade-in overflow-hidden">
                     <div class="flex-1 overflow-y-auto p-4 bg-gray-200">
-                        <!-- Filter Buttons -->
                         <div class="mb-4 overflow-x-auto whitespace-nowrap pb-2 flex" id="pos-categories">
                             <button onclick="filterPos('All')" class="px-4 py-2 bg-gray-800 text-white rounded-full text-sm mr-2 shadow flex-shrink-0">All</button>
                             <button onclick="filterPos('Main')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100 flex-shrink-0">Main</button>
@@ -190,12 +258,10 @@
                             <button onclick="filterPos('Beverage')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100 flex-shrink-0">Beverages</button>
                             <button onclick="filterPos('Dessert')" class="px-4 py-2 bg-white text-gray-800 rounded-full text-sm mr-2 shadow hover:bg-gray-100 flex-shrink-0">Desserts</button>
                         </div>
-                        <!-- Menu Grid -->
                         <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-20 md:pb-4">
                             <!-- Items -->
                         </div>
                     </div>
-                    <!-- Cart Sidebar -->
                     <div class="w-full md:w-96 bg-white shadow-xl flex flex-col h-1/2 md:h-full border-t md:border-l border-gray-300">
                         <div class="p-4 bg-gray-50 border-b border-gray-200">
                             <h3 class="font-bold text-lg">New Order</h3>
@@ -321,6 +387,10 @@
         let cart = {}; // { itemId: { quantity: 1, discount: 0, item: {...} } }
         const ADMIN_EMAIL = "admin@smbwg.com";
 
+        // Report Data State
+        let reportSalesData = [];
+        let reportAuditData = [];
+
         // --- MOBILE UI LOGIC ---
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const sidebar = document.getElementById('sidebar');
@@ -335,6 +405,17 @@
         mobileMenuBtn.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
         closeSidebarBtn.addEventListener('click', toggleSidebar);
+
+        // Populate Report Year
+        const currentYear = new Date().getFullYear();
+        const yearSelect = document.getElementById('report-year');
+        for(let i=currentYear; i>=currentYear-5; i--) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = i;
+            yearSelect.appendChild(opt);
+        }
+        document.getElementById('report-month').value = new Date().getMonth();
 
         // --- AUTH ---
         onAuthStateChanged(auth, async (user) => {
@@ -402,6 +483,104 @@
                 cBadge.textContent = cashierCount;
                 cBadge.classList.toggle('hidden', cashierCount === 0);
             });
+        }
+
+        // --- REPORTING LOGIC ---
+        window.generateReports = async () => {
+            const m = parseInt(document.getElementById('report-month').value);
+            const y = parseInt(document.getElementById('report-year').value);
+            
+            // Construct date range
+            const start = new Date(y, m, 1);
+            const end = new Date(y, m + 1, 0, 23, 59, 59);
+
+            const startStr = start.toISOString();
+            const endStr = end.toISOString();
+
+            // Fetch Sales
+            const salesQ = query(collection(db, "sales"), where("timestamp", ">=", startStr), where("timestamp", "<=", endStr));
+            const salesSnap = await getDocs(salesQ);
+            reportSalesData = salesSnap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // Fetch Audit Logs (Inventory Changes)
+            const auditQ = query(collection(db, "audit_logs"), where("timestamp", ">=", startStr), where("timestamp", "<=", endStr));
+            const auditSnap = await getDocs(auditQ);
+            reportAuditData = auditSnap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // Render Sales Report
+            const sBody = document.getElementById('report-sales-body');
+            sBody.innerHTML = '';
+            let total = 0;
+            if(reportSalesData.length === 0) sBody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">No sales found for this period.</td></tr>';
+            
+            reportSalesData.forEach(s => {
+                total += s.total || 0;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-gray-600">${new Date(s.timestamp).toLocaleDateString()} ${new Date(s.timestamp).toLocaleTimeString()}</td>
+                    <td class="p-3 text-gray-800 font-medium">${s.items ? s.items.length : 0} Items (Table ${s.tableNumber})</td>
+                    <td class="p-3 text-right font-bold">$${(s.total||0).toFixed(2)}</td>
+                `;
+                sBody.appendChild(tr);
+            });
+            document.getElementById('report-sales-total').textContent = `Total: $${total.toFixed(2)}`;
+
+            // Render Audit Report
+            const aBody = document.getElementById('report-audit-body');
+            aBody.innerHTML = '';
+            if(reportAuditData.length === 0) aBody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">No inventory changes found.</td></tr>';
+
+            reportAuditData.forEach(a => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-gray-600">${new Date(a.timestamp).toLocaleDateString()}</td>
+                    <td class="p-3"><span class="uppercase text-xs font-bold px-2 py-1 rounded bg-gray-100">${a.action}</span></td>
+                    <td class="p-3 text-sm text-gray-700">${a.description}</td>
+                `;
+                aBody.appendChild(tr);
+            });
+
+            showToast(`Report Generated: ${reportSalesData.length} Sales, ${reportAuditData.length} Logs`, "success");
+        };
+
+        window.downloadSalesCSV = () => {
+            if(reportSalesData.length === 0) return showToast("No data to download", "error");
+            
+            let csv = "Date,Time,Table,Items,Total,Staff\n";
+            reportSalesData.forEach(row => {
+                const d = new Date(row.timestamp);
+                const itemsStr = row.items ? row.items.map(i => `${i.qty}x ${i.name}`).join(';') : '';
+                // Escape quotes in itemsStr if necessary
+                csv += `${d.toLocaleDateString()},${d.toLocaleTimeString()},${row.tableNumber},"${itemsStr}",${(row.total||0).toFixed(2)},${row.staffEmail}\n`;
+            });
+
+            downloadCSV(csv, `Sales_Report_${document.getElementById('report-month').value}_${document.getElementById('report-year').value}.csv`);
+        };
+
+        window.downloadAuditCSV = () => {
+            if(reportAuditData.length === 0) return showToast("No data to download", "error");
+
+            let csv = "Date,Time,Action,Description,User\n";
+            reportAuditData.forEach(row => {
+                const d = new Date(row.timestamp);
+                csv += `${d.toLocaleDateString()},${d.toLocaleTimeString()},${row.action},"${row.description.replace(/"/g, '""')}",${row.staffEmail}\n`;
+            });
+
+            downloadCSV(csv, `Inventory_Log_${document.getElementById('report-month').value}_${document.getElementById('report-year').value}.csv`);
+        };
+
+        function downloadCSV(csvContent, fileName) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
 
         // --- ACTIVE ORDER VIEWS (KITCHEN & CASHIER) ---
