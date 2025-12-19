@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sambuwig Accounting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- LOGIN -->
+    <div id="login-view" class="fixed inset-0 z-50 bg-slate-900 flex flex-col justify-center items-center p-6">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <i class="fas fa-calculator text-4xl text-indigo-600 mb-2"></i>
+                <h1 class="text-2xl font-bold text-slate-800">Accounting Portal</h1>
+                <p class="text-slate-500 text-sm">Oversee & Admin Access Only</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase">Email</label>
+                    <input type="email" id="email" class="w-full p-3 rounded border focus:border-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase">Password</label>
+                    <input type="password" id="password" class="w-full p-3 rounded border focus:border-indigo-500 outline-none" required>
+                </div>
+                <div id="login-error" class="text-red-500 text-xs hidden font-bold text-center"></div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded hover:bg-indigo-700 transition">Access Ledger</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app-view" class="hidden flex-1 flex h-full">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20">
+            <div class="p-6 border-b border-slate-800 flex items-center">
+                <i class="fas fa-coins text-indigo-400 text-xl mr-3"></i>
+                <span class="font-bold text-lg">Finance</span>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center bg-slate-800 text-indigo-400" data-target="dashboard">
+                    <i class="fas fa-chart-pie w-6 text-center"></i> <span class="ml-2">Overview</span>
+                </button>
+                <div class="px-3 pt-4 pb-1 text-xs font-bold text-slate-500 uppercase">Transactions</div>
+                <button onclick="switchTab('expenses')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="expenses">
+                    <i class="fas fa-receipt w-6 text-center"></i> <span class="ml-2">Expenses</span>
+                </button>
+                <button onclick="switchTab('balance')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="balance">
+                    <i class="fas fa-wallet w-6 text-center"></i> <span class="ml-2">Opening Fund</span>
+                </button>
+                
+                <div class="px-3 pt-4 pb-1 text-xs font-bold text-slate-500 uppercase">Balance Sheet</div>
+                <button onclick="switchTab('assets')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="assets">
+                    <i class="fas fa-building w-6 text-center"></i> <span class="ml-2">Assets</span>
+                </button>
+                <button onclick="switchTab('liabilities')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="liabilities">
+                    <i class="fas fa-file-invoice-dollar w-6 text-center"></i> <span class="ml-2">Liabilities</span>
+                </button>
+
+                <div class="px-3 pt-4 pb-1 text-xs font-bold text-slate-500 uppercase">Planning</div>
+                <button onclick="switchTab('budget')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="budget">
+                    <i class="fas fa-bullseye w-6 text-center"></i> <span class="ml-2">Budgeting</span>
+                </button>
+                <button onclick="switchTab('reports')" class="nav-btn w-full text-left p-3 rounded hover:bg-slate-800 transition flex items-center" data-target="reports">
+                    <i class="fas fa-print w-6 text-center"></i> <span class="ml-2">Reports</span>
+                </button>
+            </nav>
+            <div class="p-4 border-t border-slate-800">
+                <div class="text-xs text-slate-500 mb-2 truncate" id="user-display"></div>
+                <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-bold flex items-center">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <main class="flex-1 overflow-y-auto bg-slate-100 p-8 relative">
+            
+            <!-- DASHBOARD -->
+            <div id="tab-dashboard" class="content-tab fade-in space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-slate-800">Financial Overview <span class="text-sm font-normal text-slate-500 ml-2">(This Month)</span></h2>
+                    <select id="dash-month-filter" class="border rounded p-2 text-sm bg-white" onchange="refreshDashboard()">
+                        <!-- JS Populates -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                        <p class="text-slate-500 text-xs uppercase font-bold">Total Revenue (POS)</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1" id="dash-sales">$0.00</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+                        <p class="text-slate-500 text-xs uppercase font-bold">Total Expenses</p>
+                        <h3 class="text-2xl font-bold text-red-600 mt-1" id="dash-expenses">$0.00</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-indigo-600">
+                        <p class="text-slate-500 text-xs uppercase font-bold">Net Profit (P&L)</p>
+                        <h3 class="text-2xl font-bold text-indigo-700 mt-1" id="dash-net">$0.00</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                        <p class="text-slate-500 text-xs uppercase font-bold">Net Worth (A-L)</p>
+                        <h3 class="text-2xl font-bold text-purple-700 mt-1" id="dash-worth">$0.00</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow h-96">
+                    <h3 class="font-bold text-slate-700 mb-4">Cash Flow Analysis</h3>
+                    <canvas id="financeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ASSETS -->
+            <div id="tab-assets" class="content-tab hidden fade-in">
+                <div class="flex gap-6 h-full">
+                    <!-- Form -->
+                    <div class="w-1/3 bg-white p-6 rounded-lg shadow h-fit">
+                        <h3 class="font-bold text-lg text-slate-800 mb-4 pb-2 border-b">Add Asset</h3>
+                        <form id="asset-form" class="space-y-4">
+                            <input type="text" id="asset-name" class="w-full border rounded p-2 text-sm" placeholder="Asset Name (e.g. Oven)" required>
+                            <select id="asset-type" class="w-full border rounded p-2 text-sm bg-white">
+                                <option value="Current">Current Asset (Cash/Inventory)</option>
+                                <option value="Fixed">Fixed Asset (Equipment/Furniture)</option>
+                            </select>
+                            <input type="number" step="0.01" id="asset-value" class="w-full border rounded p-2 text-sm" placeholder="Value" required>
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700">Save Asset</button>
+                        </form>
+                    </div>
+                    <!-- List -->
+                    <div class="flex-1 bg-white rounded-lg shadow p-4 flex flex-col">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 class="font-bold text-slate-700">Asset Register</h3>
+                            <span class="text-sm font-bold text-blue-600" id="total-assets-val">Total: $0.00</span>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-100"><tr><th class="p-2">Name</th><th class="p-2">Type</th><th class="p-2 text-right">Value</th><th class="p-2 text-right">Action</th></tr></thead>
+                                <tbody id="asset-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIABILITIES -->
+            <div id="tab-liabilities" class="content-tab hidden fade-in">
+                <div class="flex gap-6 h-full">
+                    <!-- Form -->
+                    <div class="w-1/3 bg-white p-6 rounded-lg shadow h-fit">
+                        <h3 class="font-bold text-lg text-slate-800 mb-4 pb-2 border-b">Add Liability</h3>
+                        <form id="liability-form" class="space-y-4">
+                            <input type="text" id="liab-name" class="w-full border rounded p-2 text-sm" placeholder="Liability Name (e.g. Loan)" required>
+                            <select id="liab-type" class="w-full border rounded p-2 text-sm bg-white">
+                                <option value="Short-term">Accounts Payable (Short-term)</option>
+                                <option value="Long-term">Loan/Mortgage (Long-term)</option>
+                            </select>
+                            <input type="number" step="0.01" id="liab-amount" class="w-full border rounded p-2 text-sm" placeholder="Amount Owed" required>
+                            <button type="submit" class="w-full bg-red-600 text-white font-bold py-2 rounded hover:bg-red-700">Save Liability</button>
+                        </form>
+                    </div>
+                    <!-- List -->
+                    <div class="flex-1 bg-white rounded-lg shadow p-4 flex flex-col">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 class="font-bold text-slate-700">Liabilities Register</h3>
+                            <span class="text-sm font-bold text-red-600" id="total-liab-val">Total: $0.00</span>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-100"><tr><th class="p-2">Name</th><th class="p-2">Type</th><th class="p-2 text-right">Amount</th><th class="p-2 text-right">Action</th></tr></thead>
+                                <tbody id="liab-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUDGETING -->
+            <div id="tab-budget" class="content-tab hidden fade-in flex flex-col h-full">
+                <div class="bg-white p-4 rounded shadow mb-6 flex justify-between items-end">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Budget Planner</h2>
+                        <p class="text-xs text-slate-500">Set limits for expense categories</p>
+                    </div>
+                    <form id="budget-form" class="flex gap-2 items-center">
+                        <select id="bud-cat" class="border rounded p-2 text-sm bg-white w-40">
+                            <!-- Populated by JS -->
+                        </select>
+                        <input type="number" id="bud-limit" class="border rounded p-2 text-sm w-32" placeholder="Monthly Limit" required>
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold">Set Budget</button>
+                    </form>
+                </div>
+                
+                <div id="budget-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-4">
+                    <!-- Dynamic Budget Cards -->
+                </div>
+            </div>
+
+            <!-- EXPENSES (Standard) -->
+            <div id="tab-expenses" class="content-tab hidden fade-in flex gap-6 h-full">
+                <div class="w-1/3 bg-white p-6 rounded-lg shadow h-fit">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 pb-2 border-b">Record Expense</h3>
+                    <form id="expense-form" class="space-y-4">
+                        <select id="exp-cat" class="w-full border rounded p-2 mt-1 bg-white">
+                            <option>Inventory Restock</option><option>Utilities</option><option>Salaries</option><option>Maintenance</option><option>Marketing</option><option>Rent</option><option>Other</option>
+                        </select>
+                        <input type="number" step="0.01" id="exp-amount" class="w-full border rounded p-2 mt-1" placeholder="Amount" required>
+                        <input type="date" id="exp-date" class="w-full border rounded p-2 mt-1" required>
+                        <textarea id="exp-desc" class="w-full border rounded p-2 mt-1 h-20" placeholder="Details..."></textarea>
+                        <button type="submit" class="w-full bg-red-600 text-white font-bold py-2 rounded hover:bg-red-700">Log Expense</button>
+                    </form>
+                </div>
+                <div class="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
+                    <div class="p-4 border-b bg-slate-50 font-bold text-slate-700">Recent Expenses</div>
+                    <div class="flex-1 overflow-auto"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-500 uppercase text-xs sticky top-0"><tr><th class="p-3">Date</th><th class="p-3">Category</th><th class="p-3">Description</th><th class="p-3 text-right">Amount</th><th class="p-3 text-right">Action</th></tr></thead><tbody id="expense-list"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- STARTING BALANCE -->
+            <div id="tab-balance" class="content-tab hidden fade-in">
+                <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center"><i class="fas fa-wallet text-blue-500 mr-2"></i> Opening Fund Management</h2>
+                    <form id="balance-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end mb-8 border-b pb-8">
+                        <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label><input type="date" id="bal-date" class="w-full border rounded p-2" required></div>
+                        <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Amount</label><input type="number" step="0.01" id="bal-amount" class="w-full border rounded p-2" required></div>
+                        <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 h-10">Set Balance</button>
+                    </form>
+                    <h3 class="font-bold text-slate-700 mb-4">History</h3>
+                    <div class="overflow-hidden border rounded-lg"><table class="w-full text-sm"><thead class="bg-slate-50 text-left"><tr><th class="p-3">Date</th><th class="p-3 text-right">Amount</th><th class="p-3 text-right">User</th></tr></thead><tbody id="balance-list" class="divide-y"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- REPORTS -->
+            <div id="tab-reports" class="content-tab hidden fade-in h-full flex flex-col">
+                <div class="flex justify-between items-end mb-6">
+                    <div><h2 class="text-2xl font-bold text-slate-800">Financial Reports</h2><p class="text-slate-500 text-sm">P&L and Balance Sheet</p></div>
+                    <div class="flex gap-2"><select id="report-month" class="border rounded p-2 text-sm bg-white"></select><select id="report-year" class="border rounded p-2 text-sm bg-white"></select><button onclick="generateReport()" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded hover:bg-indigo-700">Generate</button><button onclick="downloadCSV()" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700"><i class="fas fa-download"></i> CSV</button></div>
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-hidden flex-1 flex flex-col">
+                    <div class="flex-1 overflow-auto"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-500 uppercase text-xs sticky top-0"><tr><th class="p-3">Date</th><th class="p-3 text-right text-green-600">Sales (+)</th><th class="p-3 text-right text-blue-600">Fund (+)</th><th class="p-3 text-right text-red-600">Expenses (-)</th><th class="p-3 text-right font-bold">Net Flow</th></tr></thead><tbody id="report-body" class="divide-y divide-slate-100"></tbody></table></div>
+                    <div class="bg-slate-50 p-4 border-t flex justify-end space-x-8 font-bold text-lg"><div class="text-green-600">Sales: <span id="rep-total-sales">$0.00</span></div><div class="text-red-600">Exp: <span id="rep-total-exp">$0.00</span></div><div class="text-slate-800">Net: <span id="rep-total-net">$0.00</span></div></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-5 right-5 z-[60] transform translate-x-full transition-transform duration-300 bg-white border-l-4 border-indigo-500 shadow-lg p-4 rounded flex items-center hidden">
+        <div class="mr-3 text-indigo-500"><i class="fas fa-info-circle"></i></div>
+        <div class="text-sm font-bold" id="toast-msg">Notification</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, deleteDoc, doc, getDoc, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5L9S3_diMaKQ7IyXEnyhEuWOHz8-QTvY",
+            authDomain: "my-pos-system-3683a.firebaseapp.com",
+            projectId: "my-pos-system-3683a",
+            storageBucket: "my-pos-system-3683a.firebasestorage.app",
+            messagingSenderId: "1040426979758",
+            appId: "1:1040426979758:web:da01b11782d68dac86f83f",
+            measurementId: "G-19J5SSFD9H"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let expensesData = [];
+        let salesData = []; // Snapshot for dash
+        let balanceData = [];
+        let assetsData = [];
+        let liabilitiesData = [];
+        let budgetData = [];
+        let reportData = [];
+        let chartInstance = null;
+
+        const expenseCategories = ["Inventory Restock","Utilities","Salaries","Maintenance","Marketing","Rent","Other"];
+
+        // --- INIT ---
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('exp-date').value = today;
+        document.getElementById('bal-date').value = today;
+        const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const dSelect = document.getElementById('dash-month-filter');
+        const rSelect = document.getElementById('report-month');
+        monthNames.forEach((m,i) => { dSelect.add(new Option(m, i)); rSelect.add(new Option(m, i)); });
+        dSelect.value = new Date().getMonth();
+        rSelect.value = new Date().getMonth();
+        const ySelect = document.getElementById('report-year');
+        const cy = new Date().getFullYear();
+        for(let i=cy; i>=cy-5; i--) ySelect.add(new Option(i, i));
+        
+        // Populate Budget Cat Select
+        const budCatSel = document.getElementById('bud-cat');
+        expenseCategories.forEach(c => budCatSel.add(new Option(c, c)));
+
+        // --- AUTH & ROLE CHECK ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Strict Role Check
+                const uRef = doc(db, 'users', user.uid);
+                const snap = await getDoc(uRef);
+                const role = snap.exists() ? snap.data().role : 'waiter';
+                const isMaster = user.email === 'admin@smbwg.com';
+                
+                if(role !== 'oversee' && role !== 'admin' && !isMaster) {
+                    document.getElementById('login-error').textContent = "Unauthorized Access: Accounting is restricted.";
+                    document.getElementById('login-error').classList.remove('hidden');
+                    signOut(auth);
+                    return;
+                }
+
+                currentUser = user;
+                document.getElementById('user-display').textContent = user.email;
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('app-view').classList.remove('hidden');
+                
+                initListeners();
+            } else {
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('app-view').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value)
+                .catch(e => { document.getElementById('login-error').textContent = e.message; document.getElementById('login-error').classList.remove('hidden'); });
+        });
+        window.logout = () => signOut(auth);
+
+        // --- DATA SYNC ---
+        function initListeners() {
+            onSnapshot(query(collection(db, "expenses"), orderBy("date", "desc")), snap => { expensesData = snap.docs.map(d => ({id: d.id, ...d.data()})); renderExpenses(); refreshDashboard(); renderBudget(); });
+            onSnapshot(query(collection(db, "opening_balance"), orderBy("date", "desc")), snap => { balanceData = snap.docs.map(d => ({id: d.id, ...d.data()})); renderBalances(); refreshDashboard(); });
+            onSnapshot(query(collection(db, "assets"), orderBy("name")), snap => { assetsData = snap.docs.map(d => ({id: d.id, ...d.data()})); renderAssets(); refreshDashboard(); });
+            onSnapshot(query(collection(db, "liabilities"), orderBy("name")), snap => { liabilitiesData = snap.docs.map(d => ({id: d.id, ...d.data()})); renderLiabilities(); refreshDashboard(); });
+            onSnapshot(collection(db, "budgets"), snap => { budgetData = snap.docs.map(d => ({id: d.id, ...d.data()})); renderBudget(); });
+            refreshDashboard(); 
+        }
+
+        // --- DASHBOARD ---
+        window.refreshDashboard = async () => {
+            const m = parseInt(document.getElementById('dash-month-filter').value);
+            const y = new Date().getFullYear(); 
+            const start = new Date(y, m, 1).toISOString();
+            const end = new Date(y, m + 1, 0, 23, 59, 59).toISOString();
+
+            // POS Sales
+            const sQ = query(collection(db, "sales"), where("timestamp", ">=", start), where("timestamp", "<=", end));
+            const sSnap = await getDocs(sQ);
+            const sales = sSnap.docs.map(d => d.data());
+            const totalSales = sales.reduce((sum, s) => sum + (s.total||0), 0);
+
+            // Filtered Data
+            const exps = expensesData.filter(e => e.date >= start.split('T')[0] && e.date <= end.split('T')[0]);
+            const totalExp = exps.reduce((sum, e) => sum + (e.amount||0), 0);
+            
+            // Note: dash-opening removed as element was removed from HTML
+            
+            // Net Worth
+            const totalAssets = assetsData.reduce((s,a)=>s+a.value,0);
+            const totalLiabs = liabilitiesData.reduce((s,l)=>s+l.amount,0);
+
+            document.getElementById('dash-sales').textContent = fmt(totalSales);
+            document.getElementById('dash-expenses').textContent = fmt(totalExp);
+            document.getElementById('dash-net').textContent = fmt(totalSales - totalExp); // Pure P&L
+            document.getElementById('dash-worth').textContent = fmt(totalAssets - totalLiabs);
+
+            renderChart(sales, exps);
+        };
+
+        function renderChart(sales, exps) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            const days = {};
+            sales.forEach(s => { const d = s.timestamp.split('T')[0]; if(!days[d]) days[d]={i:0,e:0}; days[d].i += s.total; });
+            exps.forEach(e => { const d = e.date; if(!days[d]) days[d]={i:0,e:0}; days[d].e += e.amount; });
+            const labels = Object.keys(days).sort();
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [ { label: 'Income', data: labels.map(d=>days[d].i), backgroundColor: '#22c55e' }, { label: 'Expense', data: labels.map(d=>days[d].e), backgroundColor: '#ef4444' } ] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- ASSETS & LIABILITIES ---
+        document.getElementById('asset-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "assets"), {
+                name: document.getElementById('asset-name').value,
+                type: document.getElementById('asset-type').value,
+                value: parseFloat(document.getElementById('asset-value').value)
+            });
+            e.target.reset(); showToast("Asset Added");
+        });
+        function renderAssets() {
+            const b = document.getElementById('asset-list'); b.innerHTML = '';
+            let t = 0;
+            assetsData.forEach(a => {
+                t += a.value;
+                b.innerHTML += `<tr class="border-b"><td class="p-2 font-bold">${a.name}</td><td class="p-2 text-xs text-slate-500 uppercase">${a.type}</td><td class="p-2 text-right text-green-600">${fmt(a.value)}</td><td class="p-2 text-right"><button onclick="delDoc('assets','${a.id}')" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            document.getElementById('total-assets-val').textContent = "Total: " + fmt(t);
+        }
+
+        document.getElementById('liability-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "liabilities"), {
+                name: document.getElementById('liab-name').value,
+                type: document.getElementById('liab-type').value,
+                amount: parseFloat(document.getElementById('liab-amount').value)
+            });
+            e.target.reset(); showToast("Liability Added");
+        });
+        function renderLiabilities() {
+            const b = document.getElementById('liab-list'); b.innerHTML = '';
+            let t = 0;
+            liabilitiesData.forEach(l => {
+                t += l.amount;
+                b.innerHTML += `<tr class="border-b"><td class="p-2 font-bold">${l.name}</td><td class="p-2 text-xs text-slate-500 uppercase">${l.type}</td><td class="p-2 text-right text-red-600">${fmt(l.amount)}</td><td class="p-2 text-right"><button onclick="delDoc('liabilities','${l.id}')" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            document.getElementById('total-liab-val').textContent = "Total: " + fmt(t);
+        }
+
+        // --- BUDGETING ---
+        document.getElementById('budget-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cat = document.getElementById('bud-cat').value;
+            const lim = parseFloat(document.getElementById('bud-limit').value);
+            
+            // Upsert Logic (Simple deletion of old for this cat for demo)
+            const old = budgetData.find(b => b.category === cat);
+            if(old) await deleteDoc(doc(db, "budgets", old.id));
+            
+            await addDoc(collection(db, "budgets"), { category: cat, limit: lim });
+            e.target.reset(); showToast("Budget Set");
+        });
+
+        function renderBudget() {
+            const c = document.getElementById('budget-container'); c.innerHTML = '';
+            const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+            
+            budgetData.forEach(b => {
+                // Calc actuals for current month
+                const actual = expensesData
+                    .filter(e => e.category === b.category && e.date.startsWith(currentMonthStr))
+                    .reduce((s, e) => s + e.amount, 0);
+                
+                const pct = Math.min((actual / b.limit) * 100, 100);
+                const color = pct > 90 ? 'bg-red-500' : (pct > 75 ? 'bg-yellow-500' : 'bg-green-500');
+
+                c.innerHTML += `
+                    <div class="bg-white p-4 rounded shadow border">
+                        <div class="flex justify-between font-bold text-slate-700 mb-2"><span>${b.category}</span><span>${fmt(actual)} / ${fmt(b.limit)}</span></div>
+                        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-2">
+                            <div class="${color} h-2.5 rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="text-xs text-slate-500 text-right">${(b.limit - actual).toFixed(2)} remaining</div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- EXPENSES ---
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "expenses"), { category: document.getElementById('exp-cat').value, amount: parseFloat(document.getElementById('exp-amount').value), date: document.getElementById('exp-date').value, description: document.getElementById('exp-desc').value, user: currentUser.email, timestamp: new Date().toISOString() });
+            e.target.reset(); document.getElementById('exp-date').value = today; showToast("Recorded");
+        });
+        function renderExpenses() {
+            const b = document.getElementById('expense-list'); b.innerHTML = '';
+            expensesData.slice(0,50).forEach(e => {
+                b.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-3">${e.date}</td><td class="p-3"><span class="bg-slate-200 text-xs px-2 py-1 rounded">${e.category}</span></td><td class="p-3 text-slate-500">${e.description||'-'}</td><td class="p-3 text-right font-bold text-red-600">-${fmt(e.amount)}</td><td class="p-3 text-right"><button onclick="delDoc('expenses','${e.id}')" class="text-slate-400"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+        }
+
+        // --- BALANCE ---
+        document.getElementById('balance-form').addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, "opening_balance"), { date: document.getElementById('bal-date').value, amount: parseFloat(document.getElementById('bal-amount').value), user: currentUser.email }); e.target.reset(); document.getElementById('bal-date').value = today; showToast("Balance Set"); });
+        function renderBalances() { const b = document.getElementById('balance-list'); b.innerHTML = ''; balanceData.slice(0,20).forEach(x => b.innerHTML += `<tr class="border-b"><td class="p-3">${x.date}</td><td class="p-3 text-right text-blue-600 font-bold">${fmt(x.amount)}</td><td class="p-3 text-right text-xs">${x.user}</td></tr>`); }
+
+        // --- REPORTS ---
+        window.generateReport = async () => {
+            const m = parseInt(document.getElementById('report-month').value);
+            const y = parseInt(document.getElementById('report-year').value);
+            const start = new Date(y, m, 1).toISOString();
+            const end = new Date(y, m + 1, 0, 23, 59, 59).toISOString();
+            const sQ = query(collection(db, "sales"), where("timestamp", ">=", start), where("timestamp", "<=", end));
+            const sales = (await getDocs(sQ)).docs.map(d => d.data());
+            
+            const prefix = `${y}-${String(m+1).padStart(2,'0')}`;
+            const exps = expensesData.filter(e => e.date.startsWith(prefix));
+            const bals = balanceData.filter(b => b.date.startsWith(prefix));
+            
+            const daily = {};
+            const add = (d,k,v) => { if(!daily[d]) daily[d]={s:0,e:0,b:0}; daily[d][k]+=v; };
+            sales.forEach(s => add(s.timestamp.split('T')[0], 's', s.total));
+            exps.forEach(e => add(e.date, 'e', e.amount));
+            bals.forEach(b => add(b.date, 'b', b.amount));
+
+            const bBody = document.getElementById('report-body'); bBody.innerHTML = '';
+            let ts=0, te=0, tn=0;
+            reportData = [];
+            Object.keys(daily).sort().forEach(d => {
+                const x = daily[d]; const net = x.s + x.b - x.e;
+                ts+=x.s; te+=x.e; tn+=net;
+                reportData.push({d, ...x, net});
+                bBody.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 text-slate-600">${d}</td><td class="p-3 text-right text-green-600">${fmt(x.s)}</td><td class="p-3 text-right text-blue-600">${fmt(x.b)}</td><td class="p-3 text-right text-red-600">${fmt(x.e)}</td><td class="p-3 text-right font-bold">${fmt(net)}</td></tr>`;
+            });
+            document.getElementById('rep-total-sales').textContent=fmt(ts);
+            document.getElementById('rep-total-exp').textContent=fmt(te);
+            document.getElementById('rep-total-net').textContent=fmt(tn);
+            showToast("Report Ready");
+        };
+
+        window.downloadCSV = () => {
+            if(!reportData.length) return showToast("Generate first", "error");
+            let csv = "Date,Sales,Fund,Expenses,Net Flow\n" + reportData.map(r => `${r.d},${r.s},${r.b},${r.e},${r.net}`).join('\n');
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'Report.csv'; a.click();
+        }
+
+        // --- UTILS ---
+        window.delDoc = async (col, id) => { if(confirm("Delete?")) await deleteDoc(doc(db, col, id)); };
+        function fmt(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+        window.switchTab = (id) => {
+            document.querySelectorAll('.content-tab').forEach(e => e.classList.add('hidden'));
+            document.getElementById('tab-'+id).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('bg-slate-800', 'text-indigo-400'));
+            document.querySelector(`button[data-target="${id}"]`).classList.add('bg-slate-800', 'text-indigo-400');
+        };
+        function showToast(msg, type) {
+            const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden', 'translate-x-full');
+            if(type === 'error') t.classList.replace('border-indigo-500', 'border-red-500'); else t.classList.replace('border-red-500', 'border-indigo-500');
+            setTimeout(() => t.classList.add('translate-x-full'), 3000);
+        }
+    </script>
+</body>
+</html>
